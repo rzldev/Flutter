@@ -1,11 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'dart:io';
 
-import './widgets/new_transaction.dart';
-import './widgets/transaction_list.dart';
-import './widgets/chart.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 
 import './models/transaction.dart';
+import './widgets/chart.dart';
+import './widgets/new_transaction.dart';
+import './widgets/transaction_list.dart';
 
 void main() {
   // WidgetsFlutterBinding.ensureInitialized();
@@ -145,17 +146,32 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final appBar = AppBar(
-      title: Text('Personal Expenses App'),
-      actions: <Widget>[
-        IconButton(
-          icon: Icon(Icons.add),
-          onPressed: () {
-            _openAddTransactionModal(context);
-          },
-        ),
-      ],
-    );
+    final PreferredSizeWidget appBar = Platform.isIOS
+        ? CupertinoNavigationBar(
+            middle: Text(
+              'Personal Expenses',
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                GestureDetector(
+                  child: Icon(CupertinoIcons.add),
+                  onTap: () => _openAddTransactionModal(context),
+                ),
+              ],
+            ),
+          )
+        : AppBar(
+            title: Text('Personal Expenses App'),
+            actions: <Widget>[
+              IconButton(
+                icon: Icon(Icons.add),
+                onPressed: () {
+                  _openAddTransactionModal(context);
+                },
+              ),
+            ],
+          );
 
     Widget _transactionList(heightRatio) {
       return Container(
@@ -184,50 +200,58 @@ class _MyHomePageState extends State<MyHomePage> {
       return MediaQuery.of(context).orientation == Orientation.landscape;
     }
 
-    return Container(
-      child: Scaffold(
-        appBar: appBar,
-        body: Container(
-          child: SingleChildScrollView(
-            child: !isLandscaped()
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [_transactionChart(0.3), _transactionList(0.7)],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+    final appBody = SafeArea(
+      child: SingleChildScrollView(
+        child: !isLandscaped()
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [_transactionChart(0.3), _transactionList(0.7)],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Show Chart',
-                            style: Theme.of(context).textTheme.title,
-                          ),
-                          Switch(
-                              value: _showChart,
-                              onChanged: (showChart) {
-                                setState(() {
-                                  _showChart = showChart;
-                                });
-                              }),
-                        ],
+                      Text(
+                        'Show Chart',
+                        style: Theme.of(context).textTheme.title,
                       ),
-                      _showChart
-                          ? _transactionChart(0.8)
-                          : _transactionList(0.8)
+                      Switch(
+                          value: _showChart,
+                          onChanged: (showChart) {
+                            setState(() {
+                              _showChart = showChart;
+                            });
+                          }),
                     ],
                   ),
-          ),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: FloatingActionButton(
-          child: Icon(Icons.add),
-          onPressed: () {
-            return _openAddTransactionModal(context);
-          },
-        ),
+                  _showChart ? _transactionChart(0.7) : _transactionList(0.7)
+                ],
+              ),
       ),
     );
+
+    return Platform.isIOS
+        ? CupertinoPageScaffold(
+            child: appBody,
+            navigationBar: appBar,
+          )
+        : Container(
+            child: Scaffold(
+              appBar: appBar,
+              body: appBody,
+              floatingActionButtonLocation:
+                  FloatingActionButtonLocation.centerFloat,
+              floatingActionButton: Platform.isIOS
+                  ? Container()
+                  : FloatingActionButton(
+                      child: Icon(Icons.add),
+                      onPressed: () {
+                        return _openAddTransactionModal(context);
+                      },
+                    ),
+            ),
+          );
   }
 }
