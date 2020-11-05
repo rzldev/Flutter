@@ -66,4 +66,7 @@ app.*.symbols
 app.*.map.json
 
 # Environment
-env*
+.env
+.env.dev
+.env.stagging
+.env.production
