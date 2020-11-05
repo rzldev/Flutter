@@ -67,6 +67,3 @@ app.*.map.json
 
 # Environment
 .env
-.env.dev
-.env.stagging
-.env.production
