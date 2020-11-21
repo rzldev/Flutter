@@ -9,21 +9,22 @@ import '../models/order.dart';
 
 class Orders with ChangeNotifier {
   final String authToken;
+  final String userId;
   List<OrderItem> _orders = [];
 
-  Orders(this.authToken, this._orders);
+  Orders(this._orders, this.authToken, this.userId);
 
-  String url = '${DotEnv().env['API_URL']}orders.json';
+  String url = DotEnv().env['API_URL'];
 
   List<OrderItem> get orders {
     return [..._orders];
   }
 
   Future fetchOrdersData() async {
-    url = url + '?auth=$authToken';
+    String urlSegment = url + 'users/$userId/orders.json?auth=$authToken';
 
     try {
-      final response = await http.get(url);
+      final response = await http.get(urlSegment);
       final extractedData =
           await json.decode(response.body) as Map<String, dynamic>;
 
@@ -66,7 +67,7 @@ class Orders with ChangeNotifier {
   }
 
   Future addOrder(List<CartItem> cartList, double amount) async {
-    url = url + '?auth=$authToken';
+    String urlSegment = url + 'users/$userId/orders.json?auth=$authToken';
 
     final Map<String, String> requestHeader = {
       'Content-Type': 'application/json; charset=UTF-8'
@@ -90,7 +91,7 @@ class Orders with ChangeNotifier {
 
     try {
       final response = await http.post(
-        url,
+        urlSegment,
         headers: requestHeader,
         body: json.encode(requestBody),
       );

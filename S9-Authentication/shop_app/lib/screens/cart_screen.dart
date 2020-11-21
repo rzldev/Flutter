@@ -134,7 +134,9 @@ class _CartScreenState extends State<CartScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                onPressed: () => orderingItem(cart, context),
+                onPressed: cart.items.isNotEmpty
+                    ? () => orderingItem(cart, context)
+                    : null,
               ),
             ],
           ),

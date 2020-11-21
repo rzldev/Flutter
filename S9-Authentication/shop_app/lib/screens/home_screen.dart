@@ -29,15 +29,15 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future _refreshProducts(BuildContext context) async {
-    await Provider.of<Products>(context, listen: false).fetchProducts();
+  Future _initProducts(BuildContext context) async {
+    await Provider.of<Products>(context, listen: false).initProducts();
   }
 
   @override
   void didChangeDependencies() {
     // TODO: implement didChangeDependencies
     if (!_isInit) {
-      _refreshProducts(context);
+      _initProducts(context);
       setState(() => _isInit = true);
     }
 

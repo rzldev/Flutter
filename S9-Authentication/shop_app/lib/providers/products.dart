@@ -15,11 +15,16 @@ class Products with ChangeNotifier {
   List<Product> _dummy_products = dummy.dummy_products;
 
   List<Product> _loadedProducts = [];
+  List<Product> _ownedProduct = [];
 
   String url = DotEnv().env['API_URL'];
 
   List<Product> get products {
     return [..._loadedProducts];
+  }
+
+  List<Product> get ownedProducts {
+    return [..._ownedProduct];
   }
 
   List<Product> get favoriteProduct {
@@ -36,31 +41,57 @@ class Products with ChangeNotifier {
     });
   }
 
+  Future initProducts() async {
+    await fetchProducts();
+    await fetchProducts(productOwned: true);
+  }
+
   Future fetchProducts({bool productOwned = false}) async {
+    String urlSegment = url;
+
     if (productOwned) {
-      url = url +
-          'product.json?auth=$tokenId?orderBy="ownerId"&equalTo="$userId"';
+      urlSegment =
+          urlSegment + 'products.json?orderBy="ownerId"&equalTo="$userId"';
+      clearLoadedProducts(ownedProducts: true);
     } else {
-      url = url + 'products.json';
+      urlSegment = urlSegment + 'products.json';
+      clearLoadedProducts();
     }
 
+    String urlFavoriteProducts =
+        url + 'users/$userId/favoriteProducts.json?auth=$tokenId';
+
     try {
-      final response = await http.get(url);
+      final response = await http.get(urlSegment);
       final extractedData = json.decode(response.body) as Map<String, dynamic>;
 
-      clearLoadedProducts();
+      final favoriteResponse = await http.get(urlFavoriteProducts);
+      final favoriteData = json.decode(favoriteResponse.body);
 
       if (extractedData == null) {
         await insertInitProducts();
       } else {
         extractedData.forEach((key, data) {
-          _loadedProducts.add(Product(
-              id: key,
-              userId: userId,
-              title: data['title'],
-              description: data['description'],
-              price: double.parse(data['price']),
-              imageUrl: data['imageUrl']));
+          productOwned
+              ? _ownedProduct.add(Product(
+                  id: key,
+                  userId: data['ownerId'],
+                  title: data['title'],
+                  description: data['description'],
+                  price: double.parse(data['price']),
+                  imageUrl: data['imageUrl'],
+                ))
+              : _loadedProducts.add(Product(
+                  id: key,
+                  userId: data['ownerId'],
+                  title: data['title'],
+                  description: data['description'],
+                  price: double.parse(data['price']),
+                  imageUrl: data['imageUrl'],
+                  isFavorite: favoriteData != null ?? favoriteData[key] != null
+                      ? true
+                      : false,
+                ));
         });
       }
 
@@ -71,13 +102,14 @@ class Products with ChangeNotifier {
   }
 
   Future addProduct(Product product) async {
-    url = '${url}products.json?auth=$tokenId';
+    String urlSegment = '${url}products.json?auth=$tokenId';
 
     final Map<String, String> requestHeader = {
       'Content-Type': 'application/json; charset=UTF-8'
     };
 
     final Map<String, dynamic> requestBody = {
+      'ownerId': userId,
       'title': product.title,
       'price': product.price.toString(),
       'description': product.description,
@@ -87,13 +119,15 @@ class Products with ChangeNotifier {
 
     try {
       final response = await http.post(
-        url,
+        urlSegment,
         headers: requestHeader,
         body: json.encode(requestBody),
       );
 
+      final responseBody = json.decode(response.body);
+
       final newProduct = Product(
-        id: json.decode(response.body)['name'],
+        id: responseBody['name'],
         userId: product.userId,
         title: product.title,
         description: product.description,
@@ -101,7 +135,9 @@ class Products with ChangeNotifier {
         imageUrl: product.imageUrl,
       );
 
-      _loadedProducts.add(newProduct);
+      if (responseBody['error'] == null) {
+        _loadedProducts.add(newProduct);
+      }
 
       notifyListeners();
     } catch (error) {
@@ -109,8 +145,12 @@ class Products with ChangeNotifier {
     }
   }
 
-  void clearLoadedProducts() {
-    _loadedProducts = [];
+  void clearLoadedProducts({bool ownedProducts = false}) {
+    if (ownedProducts) {
+      _ownedProduct = [];
+    } else {
+      _loadedProducts = [];
+    }
   }
 
   Future updateProduct(String productId, Product newProduct) async {

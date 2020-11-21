@@ -35,10 +35,11 @@ class MyApp extends StatelessWidget {
                   new Products(auth.token, auth.userId)),
           new ChangeNotifierProvider(create: (context) => new Cart()),
           new ChangeNotifierProxyProvider<Auth, Orders>(
-              create: (context) => new Orders(
-                  Provider.of<Auth>(context, listen: false).token, []),
+              create: (context) => new Orders([],
+                  Provider.of<Auth>(context, listen: false).token,
+                  Provider.of<Auth>(context, listen: false).userId),
               update: (_, auth, previousOrders) =>
-                  new Orders(auth.token, previousOrders.orders)),
+                  new Orders(previousOrders.orders, auth.token, auth.userId)),
         ],
         child: Consumer<Auth>(
           builder: (context, auth, _) => new MaterialApp(
@@ -62,8 +63,19 @@ class MyApp extends StatelessWidget {
                 ),
               ),
             ),
-            initialRoute:
-                auth.isAuth ? HomeScreen.routeName : AuthScreen.routeName,
+            home: auth.isAuth
+                ? HomeScreen()
+                : FutureBuilder(
+                    future: auth.autoLogin(),
+                    builder: (context, authSnapshot) =>
+                        authSnapshot.connectionState == ConnectionState.waiting
+                            ? Scaffold(
+                                body: Center(
+                                  child: Text('Loading'),
+                                ),
+                              )
+                            : AuthScreen(),
+                  ),
             routes: {
               AuthScreen.routeName: (contect) => new AuthScreen(),
               HomeScreen.routeName: (context) => new HomeScreen(),

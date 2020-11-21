@@ -3,11 +3,15 @@ import 'package:provider/provider.dart';
 
 import '../models/product.dart';
 import '../screens/product_detail_screen.dart';
+import '../providers/auth.dart';
+import '../widgets/error_snackbar.dart';
 
 class ProductsOverviewItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final product = Provider.of<Product>(context, listen: false);
+
+    final auth = Provider.of<Auth>(context, listen: false);
 
     return new GestureDetector(
       onTap: () {
@@ -55,7 +59,13 @@ class ProductsOverviewItem extends StatelessWidget {
                               color: Colors.red,
                             ),
                             onTap: () async {
-                              await product.toggleFavorite();
+                              await product
+                                  .toggleFavorite(auth.token, auth.userId)
+                                  .catchError((onError) {
+                                Scaffold.of(context).hideCurrentSnackBar();
+                                return Scaffold.of(context).showSnackBar(
+                                    ErrorSnackbar(context).showErrorSnackBar());
+                              });
                             },
                           ),
                         ),
